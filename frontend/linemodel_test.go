@@ -108,3 +108,43 @@ func TestSettingLineShiftWithoutModel(t *testing.T) {
 		t.Errorf("line shift %s + %s, y offset %s + %s", b.Height, b.Depth, a.Height, a.Depth)
 	}
 }
+
+// breakingModel is a line model that is also a node.Breaker: it breaks at
+// every candidate.
+type breakingModel struct {
+	recordingModel
+	asked bool
+}
+
+func (m *breakingModel) Breaks(p *node.BreakProblem) []int {
+	m.asked = true
+	out := make([]int, len(p.Candidates))
+	for i := range out {
+		out[i] = i
+	}
+	return out
+}
+
+// A line model that is also a node.Breaker chooses the paragraph's breaks.
+func TestLineModelBreaker(t *testing.T) {
+	fe, ff := lineModelDocument(t)
+	m := &breakingModel{}
+	te := NewText()
+	te.Settings[SettingFontFamily] = ff
+	te.Settings[SettingSize] = bag.MustSP("10pt")
+	te.Settings[SettingLineModel] = node.LineModel(m)
+	te.Items = append(te.Items, "a b c")
+	vl, _, err := fe.FormatParagraph(te, bag.MustSP("100pt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := 0
+	for n := vl.List; n != nil; n = n.Next() {
+		if _, ok := n.(*node.HList); ok {
+			lines++
+		}
+	}
+	if !m.asked || lines != 3 {
+		t.Errorf("asked %v, %d lines, want a line per word", m.asked, lines)
+	}
+}

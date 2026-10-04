@@ -1655,6 +1655,10 @@ func (fe *Document) linebreakSettings(te *Text, p *Options) *node.LinebreakSetti
 	}
 	if lm, ok := te.Settings[SettingLineModel].(node.LineModel); ok {
 		ls.LineModel = lm
+		// A model that is also a node.Breaker chooses the breaks as well.
+		if b, ok := lm.(node.Breaker); ok {
+			ls.Breaker = b
+		}
 	}
 	if hp, ok := te.Settings[SettingHangingPunctuation]; ok {
 		if hps, ok := hp.(HangingPunctuation); ok {
